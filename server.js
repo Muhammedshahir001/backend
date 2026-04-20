@@ -19,14 +19,22 @@ import testimonialRoutes from './routes/testimonialRoutes.js';
 
 const app = express();
 
-// Middlewares
+// Middlewares - More permissive CORS for production stability
 app.use(cors({
-  origin: ['https://heedy.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: true, // Reflect request origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 app.use(express.json());
+
+// Log incoming requests for debugging on Render
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from ${req.headers.origin}`);
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
