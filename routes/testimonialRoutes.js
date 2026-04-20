@@ -7,14 +7,15 @@ import {
   deleteTestimonial,
   getAllTestimonialsAdmin
 } from '../controllers/testimonialController.js';
+import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.get('/', getAllTestimonials);
-router.get('/admin', getAllTestimonialsAdmin);
+router.get('/admin', protect, admin, getAllTestimonialsAdmin);
 router.get('/:id', getTestimonialById);
-router.post('/', createTestimonial);
-router.put('/:id', updateTestimonial);
-router.delete('/:id', deleteTestimonial);
+router.post('/', protect, admin, createTestimonial);
+router.put('/:id', protect, admin, updateTestimonial);
+router.delete('/:id', protect, admin, deleteTestimonial);
 
 export default router;

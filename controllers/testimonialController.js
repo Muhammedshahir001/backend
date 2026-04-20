@@ -26,8 +26,11 @@ export const createTestimonial = async (req, res) => {
   try {
     const { clientName, reviewMessage, rating, profileImage, role } = req.body;
 
-    if (!clientName || !reviewMessage) {
-      return res.status(400).json({ message: 'Client name and review message are required' });
+    if (!clientName) {
+      return res.status(400).json({ message: 'Client name is required' });
+    }
+    if (!reviewMessage) {
+      return res.status(400).json({ message: 'Review message is required' });
     }
 
     const testimonial = new Testimonial({
