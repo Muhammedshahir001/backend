@@ -15,6 +15,7 @@ import userRoutes from './routes/userRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
+import testimonialRoutes from './routes/testimonialRoutes.js';
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/testimonials', testimonialRoutes);
 
 app.get('/', (req, res) => {
   res.send('Cosmetics API is running...');
