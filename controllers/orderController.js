@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
+import Coupon from '../models/Coupon.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import sendEmail from '../utils/sendEmail.js';
@@ -40,7 +41,7 @@ export const createRazorpayOrder = async (req, res) => {
 
 export const placeOrder = async (req, res) => {
   try {
-    const { products, totalAmount, paymentMethod, paymentDetails, shippingAddress } = req.body;
+    const { products, totalAmount, discount, couponCode, paymentMethod, paymentDetails, shippingAddress } = req.body;
 
     if (products && products.length === 0) {
       return res.status(400).json({ message: 'No order items' });
@@ -60,12 +61,19 @@ export const placeOrder = async (req, res) => {
       user: req.user._id,
       products,
       totalAmount,
+      discount: discount || 0,
+      couponCode: couponCode || null,
       paymentMethod,
       paymentDetails,
       shippingAddress
     });
 
     const createdOrder = await order.save();
+
+    // If coupon was used, increment usedCount
+    if (couponCode) {
+      await Coupon.findOneAndUpdate({ code: couponCode }, { $inc: { usedCount: 1 } });
+    }
 
     // Clear user's cart after successful order
     try {

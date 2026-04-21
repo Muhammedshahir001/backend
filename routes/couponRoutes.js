@@ -1,8 +1,10 @@
 import express from 'express';
-import { getCoupons, createCoupon, updateCoupon, deleteCoupon, validateCoupon } from '../controllers/couponController.js';
+import { getCoupons, getActiveCoupons, createCoupon, updateCoupon, deleteCoupon, validateCoupon } from '../controllers/couponController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+router.get('/active', getActiveCoupons);
 
 router.route('/')
   .get(protect, admin, getCoupons)

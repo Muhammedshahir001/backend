@@ -9,9 +9,18 @@ export const getCoupons = async (req, res) => {
   }
 };
 
+export const getActiveCoupons = async (req, res) => {
+  try {
+    const coupons = await Coupon.find({ isActive: true, expiryDate: { $gt: new Date() } }).sort({ createdAt: -1 });
+    res.json(coupons);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 export const createCoupon = async (req, res) => {
   try {
-    const { code, discountType, discountValue, categoryId, expiryDate } = req.body;
+    const { code, discountType, discountValue, productIds, usageLimit, minPurchaseAmount, expiryDate } = req.body;
     const couponExists = await Coupon.findOne({ code });
     if (couponExists) return res.status(400).json({ message: 'Coupon code already exists' });
 
@@ -19,7 +28,9 @@ export const createCoupon = async (req, res) => {
       code, 
       discountType: discountType || 'percentage', 
       discountValue, 
-      categoryId: categoryId || null, 
+      productIds: productIds || [], 
+      usageLimit: (usageLimit === "" || usageLimit === undefined) ? null : usageLimit,
+      minPurchaseAmount: (minPurchaseAmount === "" || minPurchaseAmount === undefined) ? 0 : minPurchaseAmount,
       expiryDate 
     });
     res.status(201).json(coupon);
@@ -30,13 +41,15 @@ export const createCoupon = async (req, res) => {
 
 export const updateCoupon = async (req, res) => {
   try {
-    const { code, discountType, discountValue, categoryId, expiryDate, isActive } = req.body;
+    const { code, discountType, discountValue, productIds, usageLimit, minPurchaseAmount, expiryDate, isActive } = req.body;
     const coupon = await Coupon.findById(req.params.id);
     if (coupon) {
       coupon.code = code || coupon.code;
       coupon.discountType = discountType || coupon.discountType;
       coupon.discountValue = discountValue || coupon.discountValue;
-      coupon.categoryId = categoryId !== undefined ? categoryId : coupon.categoryId;
+      coupon.productIds = productIds !== undefined ? productIds : coupon.productIds;
+      coupon.usageLimit = (usageLimit === "" || usageLimit === undefined) ? null : usageLimit;
+      coupon.minPurchaseAmount = (minPurchaseAmount === "" || minPurchaseAmount === undefined) ? 0 : minPurchaseAmount;
       coupon.expiryDate = expiryDate || coupon.expiryDate;
       coupon.isActive = isActive !== undefined ? isActive : coupon.isActive;
       const updatedCoupon = await coupon.save();
@@ -65,13 +78,50 @@ export const deleteCoupon = async (req, res) => {
 
 export const validateCoupon = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, cartItems } = req.body;
     const coupon = await Coupon.findOne({ code, isActive: true, expiryDate: { $gt: new Date() } });
-    if (coupon) {
-      res.json(coupon);
-    } else {
-      res.status(400).json({ message: 'Invalid or expired coupon code' });
+    
+    if (!coupon) {
+      return res.status(400).json({ message: 'Invalid or expired coupon code' });
     }
+
+    if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
+      return res.status(400).json({ message: 'Coupon usage limit reached' });
+    }
+
+    // If productIds is empty, it applies to all products
+    const isGlobal = coupon.productIds.length === 0;
+    
+    let eligibleItems = [];
+    let eligibleTotal = 0;
+
+    if (isGlobal) {
+      eligibleItems = cartItems.map(item => item.product || item._id);
+      eligibleTotal = cartItems.reduce((sum, item) => sum + (item.offerPrice || item.price) * item.quantity, 0);
+    } else {
+      cartItems.forEach(item => {
+        const productId = item.product?._id || item.product || item._id;
+        if (coupon.productIds.includes(productId)) {
+          eligibleItems.push(productId);
+          eligibleTotal += (item.offerPrice || item.price) * item.quantity;
+        }
+      });
+    }
+
+    if (eligibleItems.length === 0) {
+      return res.status(400).json({ message: 'Coupon not applicable to any items in your cart' });
+    }
+
+    if (eligibleTotal < coupon.minPurchaseAmount) {
+      return res.status(400).json({ 
+        message: `Minimum purchase amount for this coupon is ₹${coupon.minPurchaseAmount}. Current eligible total: ₹${eligibleTotal}` 
+      });
+    }
+
+    res.json({
+      coupon,
+      eligibleItems
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
