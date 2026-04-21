@@ -25,7 +25,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Token generation moved to utils/generateToken.js
 
 export const registerUser = async (req, res) => {
-  const { name, email, password, phone, addresses } = req.body;
+  const { name, email, password, phone, addresses, street, city, state, zipCode, country } = req.body;
   try {
     const userExists = await User.findOne({ email });
     if (userExists) return res.status(400).json({ message: 'User already exists' });
@@ -36,12 +36,20 @@ export const registerUser = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = Date.now() + 10 * 60 * 1000;
 
+    // Handle address from individual fields if addresses array is not provided
+    let userAddresses = [];
+    if (Array.isArray(addresses) && addresses.length > 0) {
+      userAddresses = addresses;
+    } else if (street || city || state || zipCode || country) {
+      userAddresses = [{ street, city, state, zipCode, country }];
+    }
+
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
       phone,
-      addresses: Array.isArray(addresses) ? addresses : [],
+      addresses: userAddresses,
       otp,
       otpExpiry,
       authProvider: 'local'
