@@ -58,6 +58,11 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
+if (!MONGO_URI) {
+  console.error('CRITICAL ERROR: MONGO_URI is not defined in your .env file!');
+  process.exit(1);
+}
+
 mongoose.connect(MONGO_URI)
   .then(() => {
     console.log('Connected to MongoDB DB');
