@@ -89,24 +89,17 @@ export const validateCoupon = async (req, res) => {
       return res.status(400).json({ message: 'Coupon usage limit reached' });
     }
 
-    // If productIds is empty, it applies to all products
-    const isGlobal = coupon.productIds.length === 0;
-    
+    // Coupons only apply to specifically selected products
     let eligibleItems = [];
     let eligibleTotal = 0;
 
-    if (isGlobal) {
-      eligibleItems = cartItems.map(item => item.product || item._id);
-      eligibleTotal = cartItems.reduce((sum, item) => sum + (item.offerPrice || item.price) * item.quantity, 0);
-    } else {
-      cartItems.forEach(item => {
-        const productId = item.product?._id || item.product || item._id;
-        if (coupon.productIds.includes(productId)) {
-          eligibleItems.push(productId);
-          eligibleTotal += (item.offerPrice || item.price) * item.quantity;
-        }
-      });
-    }
+    cartItems.forEach(item => {
+      const productId = item.product?._id || item.product || item._id;
+      if (coupon.productIds.includes(productId)) {
+        eligibleItems.push(productId);
+        eligibleTotal += (item.offerPrice || item.price) * item.quantity;
+      }
+    });
 
     if (eligibleItems.length === 0) {
       return res.status(400).json({ message: 'Coupon not applicable to any items in your cart' });
